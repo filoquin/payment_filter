@@ -7,9 +7,9 @@ from odoo.addons.website_sale.controllers.main import WebsiteSale
 
 
 class WebsiteSalePaymentFilter(WebsiteSale):
-
+    
     def _get_shop_payment_values(self, order, **kwargs):
-        values = super().WebsiteSalePaymentFilter()
+        values = super()._get_shop_payment_values()
         domain = expression.AND([
             ['&', ('state', 'in', ['enabled', 'test']), ('company_id', '=', order.company_id.id)],
             [('pricelist_ids', '=', order.pricelist_id.id)],
