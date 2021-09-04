@@ -6,23 +6,17 @@ from odoo.osv import expression
 from odoo.addons.website_sale.controllers.main import WebsiteSale
 
 
-
 class WebsiteSalePaymentFilter(WebsiteSale):
 
     def _get_shop_payment_values(self, order, **kwargs):
-        shipping_partner_id = False
-        if order:
-            shipping_partner_id = order.partner_shipping_id.id or order.partner_invoice_id.id
-
-        values = dict(
-            website_sale_order=order,
-            errors=[],
-            partner=order.partner_id.id,
-            order=order,
-            payment_action_id=request.env.ref('payment.action_payment_acquirer').id,
-            return_url= '/shop/payment/validate',
-            bootstrap_formatting= True
-        )
+        values = super().WebsiteSalePaymentFilter()
+        domain = expression.AND([
+            ['&', ('state', 'in', ['enabled', 'test']), ('company_id', '=', order.company_id.id)],
+            [('pricelist_ids', '=', order.pricelist_id.id)],
+            ['|', ('website_id', '=', False), ('website_id', '=', request.website.id)],
+            ['|', ('country_ids', '=', False), ('country_ids', 'in', [order.partner_id.country_id.id])]
+        ])
+        acquirers = request.env['payment.acquirer'].search(domain)
 
         domain = expression.AND([
             [('pricelist_ids','=',order.pricelist_id.id)],
@@ -30,24 +24,12 @@ class WebsiteSalePaymentFilter(WebsiteSale):
             ['|', ('specific_countries', '=', False), ('country_ids', 'in', [order.partner_id.country_id.id])]
         ])
         acquirers = request.env['payment.acquirer'].search(domain)
-
-        values['access_token'] = order.access_token
-        values['form_acquirers'] = [acq for acq in acquirers if acq.payment_flow == 'form' and acq.view_template_id]
-        values['s2s_acquirers'] = [acq for acq in acquirers if acq.payment_flow == 's2s' and acq.registration_view_template_id]
+        values['acquirers'] = [acq for acq in acquirers if (acq.payment_flow == 'form' and acq.view_template_id) or
+                               (acq.payment_flow == 's2s' and acq.registration_view_template_id)]
         values['tokens'] = request.env['payment.token'].search(
             [('partner_id', '=', order.partner_id.id),
-            ('acquirer_id', 'in', acquirers.ids)])
+             ('acquirer_id', 'in', acquirers.ids)])
 
-        for acq in values['form_acquirers']:
-            acq.form = acq.with_context(submit_class='btn btn-primary', submit_txt=_('Pay Now')).sudo().render(
-                '/',
-                order.amount_total,
-                order.pricelist_id.currency_id.id,
-                values={
-                    'return_url': '/shop/payment/validate',
-                    'partner_id': shipping_partner_id,
-                    'billing_partner_id': order.partner_invoice_id.id,
-                }
-            )
-
+        if order:
+            values['acq_extra_fees'] = acquirers.get_acquirer_extra_fees(order.amount_total, order.currency_id, order.partner_id.country_id.id)
         return values

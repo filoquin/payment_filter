@@ -6,9 +6,9 @@
         filter payment  by order pricelist
     """,
     'author': "Filoquin",
-    'website': "http://www.sipecu.com.ar",
+    'website': "http://www.homigag.ar",
     'category': 'payment',
-    'version': '0.1',
+    'version': '13.0.0.1',
     'depends': ['payment'],
     'data': [
         'views/payment_acquirer.xml',
