@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from odoo import  _
 from odoo.http import request
 from odoo.osv import expression
 
@@ -18,12 +17,6 @@ class WebsiteSalePaymentFilter(WebsiteSale):
         ])
         acquirers = request.env['payment.acquirer'].search(domain)
 
-        domain = expression.AND([
-            [('pricelist_ids','=',order.pricelist_id.id)],
-            ['&', ('website_published', '=', True), ('company_id', '=', order.company_id.id)],
-            ['|', ('specific_countries', '=', False), ('country_ids', 'in', [order.partner_id.country_id.id])]
-        ])
-        acquirers = request.env['payment.acquirer'].search(domain)
         values['acquirers'] = [acq for acq in acquirers if (acq.payment_flow == 'form' and acq.view_template_id) or
                                (acq.payment_flow == 's2s' and acq.registration_view_template_id)]
         values['tokens'] = request.env['payment.token'].search(
